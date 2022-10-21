@@ -6,7 +6,7 @@ import json
 import dbcreds as d
 from uuid import uuid4
 
-new_token = uuid4()
+
 
 app = Flask(__name__)
 
@@ -17,12 +17,16 @@ def login():
     if(valid_check != None):
         return make_response(json.dumps(valid_check, default=str), 400)
 
-    result = dh.run_statement('CALL validate_id(?,?)', [request.json('email'), request.json('password')])
-    if (type(result) == list):
-        return new_token
-        # return make_response(json.dumps(result, default=str), 200)
+    result = dh.run_statement('CALL validate_id(?,?)', [request.json.get('email'), request.json.get('password')])
+    if (type(result) == list and len(result) == 1):
+        token = uuid4().hex
+        login_result = dh.run_statement('CALL client_log_session(?,?)', [result[0][0], token])
+        if(type(login_result) == list and login_result[0][0] == 1):
+            return make_response(json.dumps(token, default=str), 200)
+        else:
+            return make_response(json.dumps("sorry, there was an internal server error"), 400)
     else:
-        return make_response(json.dumps(result, default=str), 400)
+        return make_response(json.dumps("sorry, bad login attempt"), 400)
 
     
 
